@@ -46,7 +46,9 @@ class Swarm():
                     Maximum number of function evaluations for local minimization method
 
         costfunc : callable
-            bbbb or objective function to be evaluated
+            The objective function to be minimized
+                `` fun(x) -> float``
+            where x is an 1-D array with shape (n,).
 
         method : string
             Solver used for minimization

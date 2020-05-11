@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 from joblib import Parallel, delayed
 
 from particle import Particle
@@ -16,10 +17,45 @@ class Swarm():
         verbose=0
     ):
         '''
+        Class to create particle swarm.
 
+        Parameters
+        ----------
+        n_particles : int
+            Number of particles to be included in the swarm.
 
+        dimensions : int
+            Number of dimensions to search function for optimal
+
+        bounds : a list of tuples
+            A list of bounds of each dimension (lower bound, upper bound). For example bounds for a
+            two dimensional search :code: `[(0, 10), (-3, 2)]`.
+
+        params : dict with keys :code: `{'c1', 'c2', 'w', 'beta', 'maxfun'}`
+            Dictionary containing parameters for particle swarm optimization as well as the local
+            optimization.
+                * c1 : float
+                    Particle Swarm Optimization cognitive coefficient
+                * c2 : float
+                    Particle Swarm Optimization social coefficient
+                * w : float
+                    Particle Swarm Optimization inertial coefficient
+                * beta : float (<1)
+                    Velocity reduction parameter for particles that reflect from boundary
+                * maxfun : int
+                    Maximum number of function evaluations for local minimization method
+
+        costfunc : callable
+            bbbb or objective function to be evaluated
+
+        method : string
+            Solver used for minimization
+
+        verbose : int, optional
+           The verbosity level: if non zero, progress messages are printed. Above 50, the output
+           is sent to stdout. The frequency of the messages increases with the verbosity level.
+           If it more than 10, all iterations are reported.
         '''
-
         self.n_particles = n_particles
         self.dim = dimensions
         self.bnds = bounds
@@ -32,7 +68,32 @@ class Swarm():
         self.global_best_funcval = None
 
     def optimize(self, niters, n_jobs=None, x0=None):
+        '''
+        Optimize the swarm based on the number of iterations specified.
 
+        Parameters
+        ----------
+        niters : int
+            Number of iterations to optimize with.
+
+        n_jobs : int or None, optional (default=None)
+            Number of jobs to run in parallel.
+            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+            for more details.
+
+        x0 : array-like or None, Optional
+            Initial position of particle. If None the position of particle is assigned by random
+            uniform distribution.
+
+        Returns
+        -------
+        global_best_funcval : float
+            The best (minimum) cost function value from the swarm
+        global_best_position : float
+            The position of the particle with the most optimal (out of the swarm) cost function
+            value
+        '''
         if x0 is None:
             self.swarm = [Particle(i, self.bnds, self.params) for i in range(self.n_particles)]
         else:
@@ -47,8 +108,8 @@ class Swarm():
             self.global_best_position = self.swarm[np.argmin(swarm_cost)].position
             self.global_best_funcval = np.min(swarm_cost)
 
-        for i in range(niters):
-            self.find_local_best(n_jobs=n_jobs)
+        for i in tqdm(range(niters), desc='Swarm Iteration'):
+            self._find_local_best(n_jobs=n_jobs)
 
             swarm_cost = [self.swarm[i].err for i in range(self.n_particles)]
 
@@ -56,27 +117,22 @@ class Swarm():
             self.global_best_funcval = np.min(swarm_cost)
         return (self.global_best_funcval.copy(), self.global_best_position.copy())
 
-    def find_local_best(self, n_jobs):
+    def _find_local_best(self, n_jobs):
+        '''
+        Iterate through each particle to update position and velocity. Allow for parallelization.
+
+        Parameters
+        ----------
+        n_jobs : int or None, optional (default=None)
+            Number of jobs to run in parallel.
+            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+            for more details.
+        '''
         parallel = Parallel(n_jobs=n_jobs, verbose=self.verbose)
 
         def evaluate_particle(particle):
             particle.update(self.global_best_position, self.costfunc, method=self.method)
             return particle
 
-        with parallel:
-           self.swarm = parallel(delayed(evaluate_particle)(p) for p in self.swarm)
-
-
-if __name__ == "__main__":
-
-    f = lambda x: np.exp(np.sin(50*x)) + np.sin(60*np.exp(x)) + np.sin(70*np.sin(x)) + np.sin(np.power(x, 2))
-    x = np.atleast_2d(np.linspace(0, 10, 500)).T
-
-    nparticles = 10
-    ndims = 1
-    bounds = [(0, 10)]
-    params = {'c1':0.5, 'c2':0.3, 'w':0.6, 'beta':0.3, 'maxfun':20}
-
-    pso = Swarm(nparticles, ndims, bounds, params, f)
-    pso.optimize(10)
-    import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
+        self.swarm = parallel(delayed(evaluate_particle)(p) for p in self.swarm)

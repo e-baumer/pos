@@ -91,6 +91,7 @@ class Particle():
         global_best_position : float
             From all possible particles in swarm the global best position (based on the cost
             function) before updating.
+
         costfunc : callable
             Cost or objective function to be evaluated
 
@@ -115,6 +116,7 @@ class Particle():
         ----------
         costfunc : callable
             Cost or objective function to be evaluated
+
         method : string
             Solver used for minimization
 
@@ -193,5 +195,5 @@ class Particle():
         self.position[lwr_mask] = lwr_bnds[lwr_mask]
         self.position[upr_mask] = upr_bnds[upr_mask]
 
-        all_mask = lwr_bnds + upr_mask
+        all_mask = lwr_mask + upr_mask
         self.velocity[all_mask] = -self.velocity[all_mask] * self.params['beta']

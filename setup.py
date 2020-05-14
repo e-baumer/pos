@@ -9,6 +9,6 @@ setup(
     author='Eric Nussbaumer',
     author_email='ebaumer@gmail.com',
     license='GNU GPL',
-    packages=find_packages(where='base'),
+    packages=find_packages(where='pos'),
     zip_safe=False
 )

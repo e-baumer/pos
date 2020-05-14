@@ -1,7 +1,7 @@
 import numpy as np
 
 from unittest import TestCase
-from base.swarm import Swarm
+from pos.swarm import Swarm
 
 
 class TestSwarm(TestCase):

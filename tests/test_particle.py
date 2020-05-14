@@ -1,7 +1,7 @@
 import numpy as np
 
 from unittest import TestCase
-from base.particle import Particle
+from pos.particle import Particle
 
 
 class TestParticle(TestCase):

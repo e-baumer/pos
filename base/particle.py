@@ -64,7 +64,7 @@ class Particle():
         self.pos_hist.append(self.position)
         self.vel_hist.append(self.velocity)
 
-    def evaluate(self, costfunc):
+    def evaluate(self, costfunc, position=None):
         '''
         Evaluate the cost or objective function for the current location of the particle.
 
@@ -78,10 +78,13 @@ class Particle():
         err: float
             The value of the cost or objective function for the particles current position.
         '''
-        err = costfunc(self.position)
+        if position is None:
+            err = costfunc(self.position)
+        else:
+            err = costfunc(position)
         return err
 
-    def update(self, global_best_position, costfunc, method='L-BFGS-B'):
+    def update(self, global_best_position, costfunc, method='minimize'):
         '''
         Runs one iteration of updating particle position and local minimization search based on
         new position.
@@ -104,10 +107,14 @@ class Particle():
         self._storestate()
         self.update_velocity(global_best_position)
         self.update_position()
-        local_opt = self.local_optimal(costfunc, method)
+        if method.lower() == 'minimize':
+            local_opt = self.local_search_min(costfunc, method)
+        elif method.lower() == 'stochastic':
+            local_opt = self.local_search_stoch(costfunc)
+
         return local_opt
 
-    def local_optimal(self, costfunc, method):
+    def local_search_min(self, costfunc, method):
         '''
         Determine the local optimal (minimum) of the cost function based on the particles current
         position.
@@ -125,16 +132,62 @@ class Particle():
         err: float
             Local optimal value of cost function
         '''
+        dim_length = np.array([np.abs(bnds[1] - bnds[0]) for bnds in self.bounds])
+        search_bnds = dim_length * np.asarray(self.params['dim_scale'])
+        lwr_bnds = [self.position[i] - search_bnds[i] for i in range(self.ndims)]
+        upr_bnds = [self.position[i] + search_bnds[i] for i in range(self.ndims)]
+        local_bounds = [(bnd[0], bnd[1]) for bnd in zip(lwr_bnds, upr_bnds)]
+
         res = minimize(
             costfunc,
             self.position,
-            method=method,
-            bounds=self.bounds,
+            method='L-BFGS-B',
+            bounds=local_bounds,
             options={'maxfun':self.params['maxfun']}
         )
 
         self.position = res.x
         self.err = res.fun
+
+        if self.err_best is None or (self.err < self.err_best):
+            self.pos_best = self.position
+            self.err_best = self.err
+
+        return self.err.copy()
+
+    def local_search_stoch(self, costfunc):
+        '''
+        Conducts a random search of neighbor points and returns point with minimum objective
+        function value.
+
+        Parameters
+        ----------
+        costfunc : callable
+            Cost or objective function to be evaluated
+
+        Returns
+        -------
+        err: float
+            Local optimal value of cost function based on random search
+        '''
+        err = []
+        pos = []
+        for i in range(self.params['maxfun']):
+            dim_length = np.array([np.abs(bnds[1] - bnds[0]) for bnds in self.bounds])
+            search_bnds = dim_length * np.asarray(self.params['dim_scale'])
+            lwr_bnds = [self.position[i] - search_bnds[i] for i in range(self.ndims)]
+            upr_bnds = [self.position[i] + search_bnds[i] for i in range(self.ndims)]
+
+            position = np.random.uniform(low=lwr_bnds, high=upr_bnds, size=self.ndims)
+            position = self._check_position(position, update_vel=False, update_pos=False)
+            err.append(self.evaluate(costfunc, position=position))
+            pos.append(position)
+
+        err = np.array(err)
+        pos = np.array(pos)
+        min_ind = np.argmin(err)
+        self.err = err[min_ind]
+        self.position = pos[min_ind]
 
         if self.err_best is None or (self.err < self.err_best):
             self.pos_best = self.position
@@ -173,9 +226,9 @@ class Particle():
         '''
         position = self.position.copy()
         position += self.velocity
-        self._check_bounds(position)
+        self._check_position(position)
 
-    def _check_bounds(self, position):
+    def _check_position(self, position, update_vel=True, update_pos=True):
         '''
         Check whether the current update to the particle position puts the particle outside of
         any bounds. If so, the particle will be reflected from the boundary. The resulting velocity
@@ -191,9 +244,13 @@ class Particle():
         lwr_mask = position <= lwr_bnds
         upr_mask = position >= upr_bnds
 
-        self.position = position.copy()
-        self.position[lwr_mask] = lwr_bnds[lwr_mask]
-        self.position[upr_mask] = upr_bnds[upr_mask]
+        position[lwr_mask] = lwr_bnds[lwr_mask]
+        position[upr_mask] = upr_bnds[upr_mask]
 
-        all_mask = lwr_mask + upr_mask
-        self.velocity[all_mask] = -self.velocity[all_mask] * self.params['beta']
+        if update_pos:
+            self.position = position.copy()
+
+        if update_vel:
+            all_mask = lwr_mask + upr_mask
+            self.velocity[all_mask] = -self.velocity[all_mask] * self.params['beta']
+        return position

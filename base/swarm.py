@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from joblib import Parallel, delayed
 
-from particle import Particle
+from .particle import Particle
 
 
 class Swarm():
@@ -13,7 +13,7 @@ class Swarm():
         bounds,
         params,
         costfunc,
-        method='L-BFGS-B',
+        method='minimize',
         verbose=0
     ):
         '''
@@ -44,14 +44,20 @@ class Swarm():
                     Velocity reduction parameter for particles that reflect from boundary
                 * maxfun : int
                     Maximum number of function evaluations for local minimization method
+                    or Maximum number of samples to evaluate for random local search.
+                * dim_scale : float (0 < x <=1)
+                    This scale is applied to the length of each dimension bound to determine
+                    the radius for either local minimization or local stochastic search.
 
         costfunc : callable
             The objective function to be minimized
                 `` fun(x) -> float``
             where x is an 1-D array with shape (n,).
 
-        method : string
-            Solver used for minimization
+        method : string ('minimze' or 'stochastic'), default is 'minimize'
+            Method to use for local search. If 'minimize', Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+            numerical algorithm is used to find the local optimal value. If 'stochastic', random
+            points are searched within a radius of the updated position to look for local optimum.
 
         verbose : int, optional
            The verbosity level: if non zero, progress messages are printed. Above 50, the output

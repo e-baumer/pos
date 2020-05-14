@@ -1,6 +1,6 @@
 import numpy as np
 
-from unitest import TestCase
+from unittest import TestCase
 from base.swarm import Swarm
 
 
@@ -12,8 +12,8 @@ class TestSwarm(TestCase):
         nparticles = 10
         ndims = 1
         bounds = [(0, 10)]
-        params = {'c1':0.5, 'c2':0.3, 'w':0.6, 'beta':0.3, 'maxfun':20}
+        params = {'c1':0.5, 'c2':0.3, 'w':0.6, 'beta':0.3, 'maxfun':20, 'dim_scale':[0.02]}
 
-        pso = Swarm(nparticles, ndims, bounds, params, f)
+        pso = Swarm(nparticles, ndims, bounds, params, self.f, method='stochastic')
         func_min, position = pso.optimize(10)
-        self.assertTrue(position >= bounds[0] and position <= bounds[1])
+        self.assertTrue(position >= bounds[0][0] and position <= bounds[0][1])

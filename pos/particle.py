@@ -19,7 +19,7 @@ class Particle():
             A list of bounds of each dimension (lower bound, upper bound). For example bounds for a
             two dimensional search :code: `[(0, 10), (-3, 2)]`.
 
-        params : dict with keys :code: `{'c1', 'c2', 'w', 'beta', 'maxfun'}`
+        params : dict with keys :code: `{'c1', 'c2', 'w', 'beta', 'maxfun', 'dim_scale'}`
             Dictionary containing parameters for particle swarm optimization as well as the local
             optimization.
                 * c1 : float

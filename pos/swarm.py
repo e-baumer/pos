@@ -116,8 +116,11 @@ class Swarm():
             self.global_best_position = self.swarm[np.argmin(swarm_cost)].position
             self.global_best_funcval = np.min(swarm_cost)
 
+        last_iter = False
         for i in tqdm(range(niters), desc='Swarm Iteration'):
-            self._find_local_best(n_jobs=n_jobs)
+            if i == (niters-1): last_iter = True
+
+            self._find_local_best(n_jobs=n_jobs, last_iter=last_iter)
 
             swarm_cost = [self.swarm[i].err for i in range(self.n_particles)]
 
@@ -125,7 +128,7 @@ class Swarm():
             self.global_best_funcval = np.min(swarm_cost)
         return (self.global_best_funcval.copy(), self.global_best_position.copy())
 
-    def _find_local_best(self, n_jobs):
+    def _find_local_best(self, n_jobs, last_iter):
         '''
         Iterate through each particle to update position and velocity. Allow for parallelization.
 
@@ -140,7 +143,9 @@ class Swarm():
         parallel = Parallel(n_jobs=n_jobs, verbose=self.verbose)
 
         def evaluate_particle(particle):
-            particle.update(self.global_best_position, self.costfunc, method=self.method)
+            particle.update(
+                self.global_best_position, self.costfunc, method=self.method, last_iter=last_iter
+            )
             return particle
 
         self.swarm = parallel(delayed(evaluate_particle)(p) for p in self.swarm)

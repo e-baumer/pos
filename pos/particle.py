@@ -84,7 +84,7 @@ class Particle():
             err = costfunc(position)
         return err
 
-    def update(self, global_best_position, costfunc, method='minimize'):
+    def update(self, global_best_position, costfunc, method='minimize', last_iter=False):
         '''
         Runs one iteration of updating particle position and local minimization search based on
         new position.
@@ -107,7 +107,9 @@ class Particle():
         self._storestate()
         self.update_velocity(global_best_position)
         self.update_position()
-        if method.lower() == 'minimize':
+        if last_iter:
+            local_opt = self.local_search_min(costfunc, method)
+        elif method.lower() == 'minimize':
             local_opt = self.local_search_min(costfunc, method)
         elif method.lower() == 'stochastic':
             local_opt = self.local_search_stoch(costfunc)

@@ -1,4 +1,4 @@
 numpy==1.18.3
-scipy==1.4.1
+scipy==1.10.0
 tqdm==4.42.0
 joblib==0.14.1
